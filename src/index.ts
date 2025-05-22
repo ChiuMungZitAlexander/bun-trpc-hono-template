@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
 
@@ -12,9 +14,11 @@ app.use(
   })
 );
 
-app.get("/", (c) => c.text("Hello from Bun tRPC Hono!"));
+app.get("/", async (c) => {
+  return c.text("Welcome to server");
+});
 
 export default {
-  port: 8080,
+  port: process.env.PORT!,
   fetch: app.fetch,
 };
