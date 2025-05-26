@@ -1,0 +1,19 @@
+{
+  "name": "bun-trpc-hono-template",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "start": "bun run dist/index.js",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@hono/trpc-server": "^0.4.0",
+    "@trpc/server": "^11.4.3",
+    "hono": "^4.8.9",
+    "zod": "^4.0.10"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.19"
+  }
+}
