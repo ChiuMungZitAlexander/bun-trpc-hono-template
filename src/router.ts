@@ -8,16 +8,53 @@ import { usersTable } from "./db/schema";
 import { db } from "./lib/database";
 import { loggerMiddleware } from "./middlewares/logger";
 
-const t = initTRPC.create({});
+// Context type for tRPC
+export interface TRPCContext {
+  session: {
+    id: string | null;
+    userId: string | null;
+    data: any;
+  } | null;
+  setSession: (sessionId: string, userId: string, data?: any) => Promise<void>;
+  clearSession: () => Promise<void>;
+  [key: string]: unknown;
+}
+
+const t = initTRPC.context<TRPCContext>().create({
+  errorFormatter: ({ shape, error }) => {
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        stack:
+          process.env.NODE_ENV === "development" ? shape.data.stack : undefined,
+      },
+    };
+  },
+});
 
 const publicProcedure = t.procedure.use(loggerMiddleware);
+
+const protectedProcedure = t.procedure
+  .use(loggerMiddleware)
+  .use(async ({ ctx, next }) => {
+    if (!ctx.session?.userId) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "You must be logged in to access this resource",
+      });
+    }
+    return next();
+  });
+
 const router = t.router;
 
 export const appRouter = router({
-  getUser: publicProcedure
+  signInByEmailAndPassword: publicProcedure
     .input(
       z.object({
         email: z.email(),
+        password: z.string().min(6).max(32),
       })
     )
     .output(
@@ -25,19 +62,49 @@ export const appRouter = router({
         .object({
           name: z.string(),
           email: z.string(),
+          sessionId: z.string(),
         })
         .nullable()
     )
-    .query(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const [user] = await db
         .select()
         .from(usersTable)
         .where(eq(usersTable.email, input.email))
         .limit(1);
 
-      return user || null;
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found or password is incorrect",
+        });
+      }
+
+      const isPasswordValid = await Bun.password.verify(
+        input.password,
+        user.hashedPassword
+      );
+
+      if (!isPasswordValid) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found or password is incorrect",
+        });
+      }
+
+      const sessionId = Bun.randomUUIDv7();
+      await ctx.setSession(sessionId, user.id, {
+        name: user.name,
+        email: user.email,
+      });
+
+      return {
+        name: user.name,
+        email: user.email,
+        sessionId,
+      };
     }),
-  createUser: publicProcedure
+  signUp: publicProcedure
     .input(
       z.object({
         name: z.string().min(3).max(255),
@@ -79,6 +146,65 @@ export const appRouter = router({
             error instanceof Error ? error.message : "Failed to create user",
         });
       }
+    }),
+  getSession: publicProcedure
+    .output(
+      z.object({
+        userId: z.string().nullable(),
+        data: z.any().nullable(),
+      })
+    )
+    .query(async ({ ctx }) => {
+      if (!ctx.session) {
+        return {
+          userId: null,
+          data: null,
+        };
+      }
+
+      return {
+        userId: ctx.session.userId,
+        data: ctx.session.data,
+      };
+    }),
+  signOut: publicProcedure.mutation(async ({ ctx }) => {
+    await ctx.clearSession();
+    return { success: true };
+  }),
+  getProfile: protectedProcedure
+    .output(
+      z.object({
+        userId: z.string(),
+        name: z.string(),
+        email: z.string(),
+      })
+    )
+    .query(async ({ ctx }) => {
+      if (!ctx.session?.userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to access this resource",
+        });
+      }
+
+      const [user] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, ctx.session.userId))
+        .limit(1);
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      return {
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+      };
     }),
 });
 
