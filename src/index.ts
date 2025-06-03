@@ -1,64 +1,45 @@
 import "dotenv/config";
 
 import { Hono } from "hono";
-import { trpcServer } from "@hono/trpc-server";
+import { cors } from "hono/cors";
+import { pinoLogger, Env } from "hono-pino";
+import { pino } from "pino";
 
-import { appRouter, TRPCContext } from "./router";
-import { getSession, createSession, destroySession } from "./lib/session";
 import { initRedis } from "./lib/redis";
+
+import { trpcHandler } from "./trpc";
 
 await initRedis();
 
-const app = new Hono();
-
-const createContext = async (
-  opts: any,
-  c: any
-): Promise<Record<string, unknown>> => {
-  const sessionId = c.req.header("cookie")?.match(/sessionId=([^;]+)/)?.[1];
-
-  let session = null;
-  if (sessionId) {
-    const sessionData = await getSession(sessionId);
-    if (sessionData) {
-      session = {
-        id: sessionId,
-        userId: sessionData.userId,
-        data: sessionData.data,
-      };
-    }
-  }
-
-  return {
-    session,
-    setSession: async (newSessionId: string, userId: string, data?: any) => {
-      await createSession(newSessionId, userId, data);
-      c.header(
-        "Set-Cookie",
-        `sessionId=${newSessionId}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax${
-          process.env.NODE_ENV === "production" ? "; Secure" : ""
-        }`
-      );
-    },
-    clearSession: async () => {
-      if (sessionId) {
-        await destroySession(sessionId);
-      }
-      c.header(
-        "Set-Cookie",
-        "sessionId=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax"
-      );
-    },
-  } as TRPCContext;
-};
+const app = new Hono<Env>();
 
 app.use(
-  "/trpc/*",
-  trpcServer({
-    router: appRouter,
-    createContext,
+  pinoLogger({
+    pino: pino({
+      base: null,
+      level: "trace",
+      transport: {
+        target: "hono-pino/debug-log",
+        options: {
+          colorEnabled: process.env.NODE_ENV === "development",
+        },
+      },
+      timestamp: pino.stdTimeFunctions.isoTime,
+    }),
   })
 );
+
+app.use(
+  "/*",
+  cors({
+    origin: process.env.CORS_ORIGIN!,
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+app.use("/trpc/*", trpcHandler);
 
 app.get("/", async (c) => {
   return c.text("Welcome to server");
