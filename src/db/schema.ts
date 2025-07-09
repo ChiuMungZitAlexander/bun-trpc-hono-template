@@ -1,7 +1,7 @@
 import { pgTable, varchar, uuid, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
- * Users table with common fields
+ * Users table
  */
 export const usersTable = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
