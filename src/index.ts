@@ -1,15 +1,15 @@
-import "dotenv/config";
+// sort-imports-ignore
+import 'dotenv/config';
 
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { pinoLogger, Env } from "hono-pino";
-import { pino } from "pino";
-import { trpcServer } from "@hono/trpc-server";
+import { trpcServer } from '@hono/trpc-server';
+import { Hono } from 'hono';
+import { Env, pinoLogger } from 'hono-pino';
+import { cors } from 'hono/cors';
+import { pino } from 'pino';
 
-import { initRedis } from "./lib/redis";
-
-import { appRouter } from "./root";
-import { createTRPCContext } from "./trpc";
+import { initRedis } from './lib/redis';
+import { appRouter } from './root';
+import { createTRPCContext } from './trpc';
 
 await initRedis();
 
@@ -19,38 +19,38 @@ app.use(
   pinoLogger({
     pino: pino({
       base: null,
-      level: "trace",
+      level: 'trace',
       transport: {
-        target: "hono-pino/debug-log",
+        target: 'hono-pino/debug-log',
         options: {
-          colorEnabled: process.env.NODE_ENV === "development",
+          colorEnabled: process.env.NODE_ENV === 'development',
         },
       },
       timestamp: pino.stdTimeFunctions.isoTime,
     }),
-  })
+  }),
 );
 
 app.use(
-  "/*",
+  '/*',
   cors({
     origin: process.env.CORS_ORIGIN!,
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
-  })
+  }),
 );
 
 app.use(
-  "/trpc/*",
+  '/trpc/*',
   trpcServer({
     router: appRouter,
     createContext: createTRPCContext,
-  })
+  }),
 );
 
-app.get("/", async (c) => {
-  return c.text("Welcome to server");
+app.get('/', async (c) => {
+  return c.text('Welcome to server');
 });
 
 export default {

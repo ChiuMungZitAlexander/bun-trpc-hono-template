@@ -1,10 +1,11 @@
-import { TRPCError } from "@trpc/server";
-import { z } from "zod";
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
 
-import { router, publicProcedure, protectedProcedure } from "@/trpc";
-import { createSession, destroySession } from "@/lib/session";
+import { createSession, destroySession } from '@/lib/session';
 
-import { getUserByEmail } from "@/routes/user/user.repository";
+import { getUserByEmail } from '@/routes/user/user.repository';
+
+import { protectedProcedure, publicProcedure, router } from '@/trpc';
 
 export const authRouter = router({
   /**
@@ -15,13 +16,13 @@ export const authRouter = router({
       z.object({
         email: z.email().max(255),
         password: z.string().min(6).max(32),
-      })
+      }),
     )
     .output(
       z.object({
         email: z.email().max(255),
         name: z.string().min(3).max(255),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       try {
@@ -31,20 +32,20 @@ export const authRouter = router({
 
         if (!user) {
           throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Password is incorrect",
+            code: 'BAD_REQUEST',
+            message: 'Password is incorrect',
           });
         }
 
         const isPasswordValid = await Bun.password.verify(
           password,
-          user.hashedPassword
+          user.hashedPassword,
         );
 
         if (!isPasswordValid) {
           throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Password is incorrect",
+            code: 'BAD_REQUEST',
+            message: 'Password is incorrect',
           });
         }
 
@@ -53,8 +54,8 @@ export const authRouter = router({
         await createSession(sessionId, { sessionId, userId: user.id });
 
         ctx.resHeaders.set(
-          "Set-Cookie",
-          `sessionId=${sessionId}; Path=/; HttpOnly; SameSite=Strict`
+          'Set-Cookie',
+          `sessionId=${sessionId}; Path=/; HttpOnly; SameSite=Strict`,
         );
 
         return {
@@ -63,16 +64,16 @@ export const authRouter = router({
         };
       } catch (error) {
         ctx.resHeaders.set(
-          "Set-Cookie",
-          `sessionId=; Path=/; HttpOnly; SameSite=Strict`
+          'Set-Cookie',
+          `sessionId=; Path=/; HttpOnly; SameSite=Strict`,
         );
 
         ctx.logger.error(error);
 
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message:
-            error instanceof Error ? error.message : "Internal server error",
+            error instanceof Error ? error.message : 'Internal server error',
         });
       }
     }),
@@ -86,8 +87,8 @@ export const authRouter = router({
     await destroySession(sessionId);
 
     ctx.resHeaders.set(
-      "Set-Cookie",
-      `sessionId=; Path=/; HttpOnly; SameSite=Strict`
+      'Set-Cookie',
+      `sessionId=; Path=/; HttpOnly; SameSite=Strict`,
     );
 
     return null;
