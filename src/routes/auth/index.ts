@@ -5,7 +5,8 @@ import { createSession, destroySession } from '@/lib/session';
 
 import { getUserByEmail } from '@/routes/user/user.repository';
 
-import { protectedProcedure, publicProcedure, router } from '@/trpc';
+import { handleError } from '@/helpers/error';
+import { publicProcedure, router } from '@/trpc';
 
 export const authRouter = router({
   /**
@@ -16,12 +17,6 @@ export const authRouter = router({
       z.object({
         email: z.email().max(255),
         password: z.string().min(6).max(32),
-      }),
-    )
-    .output(
-      z.object({
-        email: z.email().max(255),
-        name: z.string().min(3).max(255),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -44,7 +39,7 @@ export const authRouter = router({
 
         if (!isPasswordValid) {
           throw new TRPCError({
-            code: 'BAD_REQUEST',
+            code: 'UNAUTHORIZED',
             message: 'Password is incorrect',
           });
         }
@@ -63,34 +58,31 @@ export const authRouter = router({
           name: user.name,
         };
       } catch (error) {
-        ctx.resHeaders.set(
-          'Set-Cookie',
-          `sessionId=; Path=/; HttpOnly; SameSite=Strict`,
-        );
-
-        ctx.logger.error(error);
-
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message:
-            error instanceof Error ? error.message : 'Internal server error',
-        });
+        handleError(error, ctx);
       }
     }),
 
   /**
    *
    */
-  signOut: protectedProcedure.output(z.null()).mutation(async ({ ctx }) => {
-    const sessionId = ctx.session?.sessionId;
+  signOut: publicProcedure.mutation(async ({ ctx }) => {
+    try {
+      const sessionId = ctx.session?.sessionId;
 
-    await destroySession(sessionId);
+      if (!sessionId) {
+        return null;
+      }
 
-    ctx.resHeaders.set(
-      'Set-Cookie',
-      `sessionId=; Path=/; HttpOnly; SameSite=Strict`,
-    );
+      await destroySession(sessionId);
 
-    return null;
+      ctx.resHeaders.set(
+        'Set-Cookie',
+        `sessionId=; Path=/; HttpOnly; SameSite=Strict`,
+      );
+
+      return null;
+    } catch (error) {
+      handleError(error, ctx);
+    }
   }),
 });
