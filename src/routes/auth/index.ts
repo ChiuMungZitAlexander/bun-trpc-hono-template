@@ -1,11 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { router, publicProcedure, protectedProcedure } from "@/trpc";
-import { db } from "@/lib/database";
 import { createSession, destroySession } from "@/lib/session";
-import { usersTable } from "@/db/schema";
+
+import { getUserByEmail } from "@/routes/user/user.repository";
 
 export const authRouter = router({
   /**
@@ -28,10 +27,7 @@ export const authRouter = router({
       try {
         const { email, password } = input;
 
-        const [user] = await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.email, email));
+        const user = await getUserByEmail(email);
 
         if (!user) {
           throw new TRPCError({
