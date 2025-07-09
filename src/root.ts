@@ -1,9 +1,7 @@
-import { router } from "./trpc";
+import { mergeRouters } from "./trpc";
 
 import { authRouter } from "./routes/auth";
 
-export const appRouter = router({
-  authRouter,
-});
+export const appRouter = mergeRouters(authRouter);
 
 export type AppRouter = typeof appRouter;

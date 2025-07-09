@@ -2,12 +2,15 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { router, publicProcedure } from "@/trpc";
+import { router, publicProcedure, protectedProcedure } from "@/trpc";
 import { db } from "@/lib/database";
-import { createSession } from "@/lib/session";
+import { createSession, destroySession } from "@/lib/session";
 import { usersTable } from "@/db/schema";
 
 export const authRouter = router({
+  /**
+   * Sign in by email and password
+   */
   signInByEmailAndPassword: publicProcedure
     .input(
       z.object({
@@ -51,7 +54,7 @@ export const authRouter = router({
 
         const sessionId = Bun.randomUUIDv7();
 
-        await createSession(sessionId, { userId: user.id });
+        await createSession(sessionId, { sessionId, userId: user.id });
 
         ctx.resHeaders.set(
           "Set-Cookie",
@@ -77,4 +80,20 @@ export const authRouter = router({
         });
       }
     }),
+
+  /**
+   *
+   */
+  signOut: protectedProcedure.output(z.null()).mutation(async ({ ctx }) => {
+    const sessionId = ctx.session?.sessionId;
+
+    await destroySession(sessionId);
+
+    ctx.resHeaders.set(
+      "Set-Cookie",
+      `sessionId=; Path=/; HttpOnly; SameSite=Strict`
+    );
+
+    return null;
+  }),
 });

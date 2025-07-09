@@ -1,13 +1,13 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
-import { trpcServer } from "@hono/trpc-server";
+
 import { Env } from "hono-pino";
 import { Context } from "hono";
 import { getCookie } from "hono/cookie";
 
 import { getSession } from "./lib/session";
 
-const createTRPCContext = async (
+export const createTRPCContext = async (
   opts: FetchCreateContextFnOptions,
   c: Context<Env>
 ) => {
@@ -40,18 +40,8 @@ const t = initTRPC
     },
   });
 
-export const trpcHandler = trpcServer({
-  router: t.router({
-    test: t.procedure.query(({ ctx }) => {
-      return {
-        test: "test",
-      };
-    }),
-  }),
-  createContext: createTRPCContext,
-});
-
 export const router = t.router;
+export const mergeRouters = t.mergeRouters;
 export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.session) {

@@ -4,10 +4,12 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { pinoLogger, Env } from "hono-pino";
 import { pino } from "pino";
+import { trpcServer } from "@hono/trpc-server";
 
 import { initRedis } from "./lib/redis";
 
-import { trpcHandler } from "./trpc";
+import { appRouter } from "./root";
+import { createTRPCContext } from "./trpc";
 
 await initRedis();
 
@@ -39,7 +41,13 @@ app.use(
   })
 );
 
-app.use("/trpc/*", trpcHandler);
+app.use(
+  "/trpc/*",
+  trpcServer({
+    router: appRouter,
+    createContext: createTRPCContext,
+  })
+);
 
 app.get("/", async (c) => {
   return c.text("Welcome to server");

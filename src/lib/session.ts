@@ -5,9 +5,13 @@ const SESSION_PREFIX = "sess:";
 const redisClient = getRedisClient();
 
 interface ISessionData {
+  sessionId: string;
   userId: string;
 }
 
+/**
+ *
+ */
 export const createSession = async (
   sessionId: string,
   data: ISessionData,
@@ -15,9 +19,12 @@ export const createSession = async (
 ) => {
   const key = SESSION_PREFIX + sessionId;
 
-  await redisClient.set(key, JSON.stringify({ data }), { EX: ttl });
+  await redisClient.set(key, JSON.stringify(data), { EX: ttl });
 };
 
+/**
+ *
+ */
 export const getSession = async (
   sessionId?: string | null
 ): Promise<ISessionData | null> => {
@@ -28,7 +35,12 @@ export const getSession = async (
   return data ? (JSON.parse(data) as ISessionData) : null;
 };
 
-export const destroySession = async (sessionId: string) => {
+/**
+ *
+ */
+export const destroySession = async (sessionId?: string) => {
+  if (!sessionId) return;
+
   const key = SESSION_PREFIX + sessionId;
 
   await redisClient.del(key);
