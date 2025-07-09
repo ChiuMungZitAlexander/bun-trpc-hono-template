@@ -9,7 +9,6 @@ const prettierConfig = {
   semi: true,
   plugins: ['@trivago/prettier-plugin-sort-imports'],
   importOrder: [
-    '^dotenv/config$',
     '^@/lib/(.*)$',
     '^@/trpc/(.*)$',
     '^@/routes/(.*)$',

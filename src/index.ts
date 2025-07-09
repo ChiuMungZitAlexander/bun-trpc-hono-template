@@ -1,6 +1,3 @@
-// sort-imports-ignore
-import 'dotenv/config';
-
 import { trpcServer } from '@hono/trpc-server';
 import { Hono } from 'hono';
 import { Env, pinoLogger } from 'hono-pino';
