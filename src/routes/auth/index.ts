@@ -3,7 +3,10 @@ import { z } from 'zod';
 
 import { createSession, destroySession } from '@/lib/session';
 
-import { getUserByEmail } from '@/routes/user/user.repository';
+import {
+  createUserByEmailAndPassword,
+  getUserByEmail,
+} from '@/routes/user/user.repository';
 
 import { handleError } from '@/helpers/error';
 import { publicProcedure, router } from '@/trpc';
@@ -63,7 +66,7 @@ export const authRouter = router({
     }),
 
   /**
-   *
+   * Sign out
    */
   signOut: publicProcedure.mutation(async ({ ctx }) => {
     try {
@@ -85,4 +88,34 @@ export const authRouter = router({
       handleError(error, ctx);
     }
   }),
+
+  /**
+   * Sign up by email and password
+   */
+  signUpByEmailAndPassword: publicProcedure
+    .input(
+      z.object({
+        email: z.email().max(255),
+        name: z.string().min(3).max(255),
+        password: z.string().min(6).max(32),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const { email, name, password } = input;
+
+        const user = await createUserByEmailAndPassword({
+          email,
+          name,
+          password,
+        });
+
+        return {
+          email: user.email,
+          name: user.name,
+        };
+      } catch (error) {
+        handleError(error, ctx);
+      }
+    }),
 });
