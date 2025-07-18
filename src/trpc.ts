@@ -3,6 +3,7 @@ import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import { Context } from 'hono';
 import { Env } from 'hono-pino';
 import { getCookie } from 'hono/cookie';
+import { ZodError } from 'zod';
 
 import { getSession } from '@/lib/session';
 
@@ -26,8 +27,14 @@ const t = initTRPC
   .context<Awaited<ReturnType<typeof createTRPCContext>>>()
   .create({
     errorFormatter: ({ shape, error }) => {
+      const message =
+        error.cause instanceof ZodError
+          ? `${error.cause.issues[0].path.join('.')}: ${error.cause.issues[0].message}`
+          : shape.message;
+
       return {
         ...shape,
+        message,
         data: {
           ...shape.data,
           stack:
