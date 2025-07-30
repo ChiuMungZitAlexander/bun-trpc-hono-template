@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+docker-compose.yml
+Dockerfile
+.prettierrc
+.husky
+.gitignore
+.eslintrc.js
+README.md
+test

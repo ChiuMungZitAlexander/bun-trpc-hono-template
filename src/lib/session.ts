@@ -1,6 +1,6 @@
-import { getRedisClient } from "./redis";
+import { getRedisClient } from './redis';
 
-const SESSION_PREFIX = "sess:";
+const SESSION_PREFIX = 'sess:';
 
 const redisClient = getRedisClient();
 
@@ -15,7 +15,7 @@ interface ISessionData {
 export const createSession = async (
   sessionId: string,
   data: ISessionData,
-  ttl = 60 * 60
+  ttl = 60 * 60,
 ) => {
   const key = SESSION_PREFIX + sessionId;
 
@@ -26,7 +26,7 @@ export const createSession = async (
  *
  */
 export const getSession = async (
-  sessionId?: string | null
+  sessionId?: string | null,
 ): Promise<ISessionData | null> => {
   if (!sessionId) return null;
 

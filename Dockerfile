@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy package files
 COPY package.json bun.lock ./
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+# Install dependencies (skip prepare script to avoid husky error)
+RUN bun install --frozen-lockfile --ignore-scripts
 
 # Copy source code
 COPY . .
@@ -26,8 +26,8 @@ COPY --from=base /app/dist ./dist
 COPY --from=base /app/package.json ./
 COPY --from=base /app/bun.lock ./
 
-# Install only production dependencies
-RUN bun install --frozen-lockfile --production
+# Install only production dependencies (skip prepare script)
+RUN bun install --frozen-lockfile --production --ignore-scripts
 
 # Set environment variable for port
 ENV PORT=8080
